@@ -44,16 +44,23 @@ halfATR    = dailyATR / 2.0
 isBullish  = ma20_5m > ma200_5m
 atrLevel   = isBullish ? dailyOpen + halfATR : dailyOpen - halfATR
 
-// === Plot Levels ===
-plot(atrLevel, "50% ATR Level", color=isBullish ? upperColor : lowerColor, linewidth=lineWidth, style=plot.style_stepline)
+// === ATR Line (solid horizontal line per day) ===
+newDay = ta.change(time("D")) != 0
+var line atrLine = na
+var label atrLabel = na
+
+if newDay
+    // Delete previous label so only current day shows price
+    if not na(atrLabel)
+        label.delete(atrLabel)
+    lineColor = isBullish ? upperColor : lowerColor
+    atrLine  := line.new(bar_index, atrLevel, bar_index + 1, atrLevel, color=lineColor, width=lineWidth, extend=extend.right)
+    atrLabel := label.new(bar_index, atrLevel, str.tostring(atrLevel, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=isBullish ? upperColor : lowerColor, size=size.normal)
+
+// === Plot MAs and Open ===
 plot(dailyOpen, "Daily Open", color=midColor, linewidth=1, style=plot.style_stepline)
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
-
-// === Background Fill Between ATR Level and Open ===
-pATR  = plot(atrLevel, display=display.none)
-pOpen = plot(dailyOpen, display=display.none)
-fill(pATR, pOpen, color=isBullish ? color.new(color.green, 88) : color.new(color.red, 88), title="ATR Zone Fill")
 
 // === Info Table ===
 if showTable and barstate.islast
