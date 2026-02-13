@@ -17,9 +17,6 @@ riskAmount   = input.float(100, "Risk Amount ($)", minval=1)
 
 // === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
-dailyHigh = request.security(syminfo.tickerid, "D", high)
-dailyLow  = request.security(syminfo.tickerid, "D", low)
-dailyOpen = request.security(syminfo.tickerid, "D", open)
 atrRMA    = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
 atrSMA    = request.security(syminfo.tickerid, "D", ta.sma(ta.tr(true), atrLength)[1], lookahead=barmerge.lookahead_on)
 dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
@@ -28,55 +25,51 @@ dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
 ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
 
-// === First Candle of the Day ===
+// === First Candle of the Day (everything calculated once here) ===
+newDay = ta.change(time("D")) != 0
+
 var float firstCandleHigh = na
 var float firstCandleLow  = na
 var float firstCandleSize = na
+var float atr50Val        = na
+var float atr100Val       = na
+var bool  bullish         = na
+
+var line line50   = na
+var line line100  = na
+var label lbl50   = na
+var label lbl100  = na
 
 if newDay
     firstCandleHigh := high
     firstCandleLow  := low
     firstCandleSize := high - low
 
-shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
+    halfATR        = dailyATR / 2.0
+    bullish        := ma20_5m > ma200_5m
+    bearishGapUp   = not bullish and open > prevClose
+    bullishGapDown = bullish and open < prevClose
+    basePrice      = bearishGapUp ? high : bullishGapDown ? low : prevClose
+    atr50Val       := bullish ? basePrice + halfATR  : basePrice - halfATR
+    atr100Val      := bullish ? basePrice + dailyATR : basePrice - dailyATR
 
-// === ATR Levels (direction based on MA order) ===
-halfATR        = dailyATR / 2.0
-isBullish      = ma20_5m > ma200_5m
-bearishGapUp   = not isBullish and dailyOpen > prevClose
-bullishGapDown = isBullish and dailyOpen < prevClose
-basePrice      = bearishGapUp ? dailyHigh : bullishGapDown ? dailyLow : prevClose
-atr50          = isBullish ? basePrice + halfATR  : basePrice - halfATR
-atr100         = isBullish ? basePrice + dailyATR : basePrice - dailyATR
-
-// === ATR Lines (today only, update every bar) ===
-var line line50  = na
-var line line100 = na
-var label lbl50  = na
-var label lbl100 = na
-
-if newDay
+    // Delete old lines and labels
     if not na(line50)
         line.delete(line50)
     if not na(line100)
         line.delete(line100)
-    line50  := line.new(bar_index, atr50,  bar_index + 1, atr50,  color=atr50Color,  width=lineWidth, extend=extend.right)
-    line100 := line.new(bar_index, atr100, bar_index + 1, atr100, color=atr100Color, width=lineWidth, extend=extend.right)
+    if not na(lbl50)
+        label.delete(lbl50)
+    if not na(lbl100)
+        label.delete(lbl100)
 
-// Update line y-values and labels every bar (for dynamic dailyHigh/dailyLow)
-if not na(line50)
-    line.set_y1(line50, atr50)
-    line.set_y2(line50, atr50)
-    line.set_color(line50, isBullish ? atr50Color : atr50Color)
-if not na(line100)
-    line.set_y1(line100, atr100)
-    line.set_y2(line100, atr100)
-if not na(lbl50)
-    label.delete(lbl50)
-if not na(lbl100)
-    label.delete(lbl100)
-lbl50  := label.new(bar_index + 5, atr50,  "50% " + str.tostring(atr50, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
-lbl100 := label.new(bar_index + 5, atr100, "100% " + str.tostring(atr100, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
+    // Draw fixed lines
+    line50  := line.new(bar_index, atr50Val,  bar_index + 1, atr50Val,  color=atr50Color,  width=lineWidth, extend=extend.right)
+    line100 := line.new(bar_index, atr100Val, bar_index + 1, atr100Val, color=atr100Color, width=lineWidth, extend=extend.right)
+    lbl50   := label.new(bar_index, atr50Val,  "50% " + str.tostring(atr50Val, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
+    lbl100  := label.new(bar_index, atr100Val, "100% " + str.tostring(atr100Val, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
+
+shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
 
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
@@ -89,14 +82,15 @@ if barstate.islast
     table.cell(t, 1, 0, str.tostring(prevClose, format.mintick), text_color=color.white, text_size=size.small)
     table.cell(t, 0, 1, "ATR(" + str.tostring(atrLength) + ")", text_color=color.white, text_size=size.small)
     table.cell(t, 1, 1, str.tostring(dailyATR, format.mintick), text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 2, "50% ATR",      text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 2, str.tostring(halfATR, format.mintick),  text_color=atr50Color, text_size=size.small)
-    table.cell(t, 0, 3, "50% Level",    text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 3, str.tostring(atr50, format.mintick),    text_color=atr50Color, text_size=size.small)
-    table.cell(t, 0, 4, "100% Level",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 4, str.tostring(atr100, format.mintick),   text_color=atr100Color, text_size=size.small)
-    table.cell(t, 0, 5, "1st Candle",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 5, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 2, "50% Level",    text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 2, str.tostring(atr50Val, format.mintick), text_color=atr50Color, text_size=size.small)
+    table.cell(t, 0, 3, "100% Level",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 3, str.tostring(atr100Val, format.mintick), text_color=atr100Color, text_size=size.small)
+    table.cell(t, 0, 4, "1st Candle",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 4, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 5, "Base Price",   text_color=color.white,  text_size=size.small)
+    baseP = not na(bullish) and not bullish and open > prevClose ? firstCandleHigh : (not na(bullish) and bullish and open < prevClose ? firstCandleLow : prevClose)
+    table.cell(t, 1, 5, str.tostring(baseP, format.mintick),    text_color=color.white, text_size=size.small)
     table.cell(t, 0, 6, "Risk $",       text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 6, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
     table.cell(t, 0, 7, "Shares",       text_color=color.white,  text_size=size.small)
