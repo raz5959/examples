@@ -14,8 +14,8 @@ ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 
 // === Daily ATR Calculation ===
-prevClose = request.security(syminfo.tickerid, "D", close[1])
-dailyATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLength))
+prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+dailyATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
 
 // === 5-Min Moving Averages ===
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
