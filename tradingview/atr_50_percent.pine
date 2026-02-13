@@ -50,7 +50,9 @@ var line atrLine = na
 var label atrLabel = na
 
 if newDay
-    // Delete previous label so only current day shows price
+    // Delete previous line and label so only today is visible
+    if not na(atrLine)
+        line.delete(atrLine)
     if not na(atrLabel)
         label.delete(atrLabel)
     lineColor = isBullish ? upperColor : lowerColor
