@@ -41,13 +41,13 @@ if newDay
 shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
 
 // === ATR Levels (direction based on MA order) ===
-halfATR   = dailyATR / 2.0
-isBullish = ma20_5m > ma200_5m
-gapUp     = dailyOpen > prevClose
-gapDown   = dailyOpen < prevClose
-basePrice = gapUp ? dailyHigh : gapDown ? dailyLow : prevClose
-atr50     = isBullish ? basePrice + halfATR  : basePrice - halfATR
-atr100    = isBullish ? basePrice + dailyATR : basePrice - dailyATR
+halfATR        = dailyATR / 2.0
+isBullish      = ma20_5m > ma200_5m
+bearishGapUp   = not isBullish and dailyOpen > prevClose
+bullishGapDown = isBullish and dailyOpen < prevClose
+basePrice      = bearishGapUp ? dailyHigh : bullishGapDown ? dailyLow : prevClose
+atr50          = isBullish ? basePrice + halfATR  : basePrice - halfATR
+atr100         = isBullish ? basePrice + dailyATR : basePrice - dailyATR
 
 // === ATR Lines (today only) ===
 newDay = ta.change(time("D")) != 0
