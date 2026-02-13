@@ -102,11 +102,13 @@ if newDay
     lbl50   := label.new(bar_index, atr50Val,  "50% " + str.tostring(atr50Val, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
     lbl100  := label.new(bar_index, atr100Val, "100% " + str.tostring(atr100Val, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
 
-    // Draw previous day high/low lines
-    linePrevH := line.new(bar_index, prevHigh, bar_index + 1, prevHigh, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    lblPrevH  := label.new(bar_index, prevHigh, "PDH " + str.tostring(prevHigh, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
-    lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
+    // Draw previous day level: Bullish → PDH only, Bearish → PDL only
+    if bullish
+        linePrevH := line.new(bar_index, prevHigh, bar_index + 1, prevHigh, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblPrevH  := label.new(bar_index, prevHigh, "PDH " + str.tostring(prevHigh, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
+    else
+        linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
 
 // === First Candle Tail Analysis (on 2nd bar, after 1st candle is complete) ===
 secondBar = newDay[1]
@@ -138,7 +140,7 @@ plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Scenario",     text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, scenario,       text_color=bullish ? color.green : color.red, text_size=size.small)
     table.cell(t, 0, 1, "Base From",    text_color=color.white,  text_size=size.small)
@@ -151,23 +153,23 @@ if barstate.islast
     table.cell(t, 1, 4, str.tostring(atr50Val, format.mintick), text_color=atr50Color, text_size=size.small)
     table.cell(t, 0, 5, "100% Level",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 5, str.tostring(atr100Val, format.mintick), text_color=atr100Color, text_size=size.small)
-    table.cell(t, 0, 6, "Prev High",    text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 6, str.tostring(prevHigh, format.mintick), text_color=prevDayColor, text_size=size.small)
-    table.cell(t, 0, 7, "Prev Low",     text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 7, str.tostring(prevLow, format.mintick),  text_color=prevDayColor, text_size=size.small)
-    table.cell(t, 0, 8, "1st Candle",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 8, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 9, "Tail %",       text_color=color.white,  text_size=size.small)
+    prevDayLabel = bullish ? "Prev High" : "Prev Low"
+    prevDayVal   = bullish ? prevHigh : prevLow
+    table.cell(t, 0, 6, prevDayLabel,   text_color=color.white,    text_size=size.small)
+    table.cell(t, 1, 6, str.tostring(prevDayVal, format.mintick), text_color=prevDayColor, text_size=size.small)
+    table.cell(t, 0, 7, "1st Candle",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 7, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 8, "Tail %",       text_color=color.white,  text_size=size.small)
     tailColor = entrySignal ? color.green : color.red
     tailText  = na(tailPct) ? "waiting..." : str.tostring(tailPct, "#.#") + "%" + (bullish ? " (upper)" : " (lower)")
-    table.cell(t, 1, 9, tailText, text_color=na(tailPct) ? color.gray : tailColor, text_size=size.small)
-    table.cell(t, 0, 10, "Entry",        text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 8, tailText, text_color=na(tailPct) ? color.gray : tailColor, text_size=size.small)
+    table.cell(t, 0, 9, "Entry",        text_color=color.white,  text_size=size.small)
     entryText  = na(tailPct) ? "waiting..." : (entrySignal ? "GO" : "NO")
     entryColor = na(tailPct) ? color.gray : (entrySignal ? color.green : color.red)
-    table.cell(t, 1, 10, entryText, text_color=entryColor, text_size=size.normal)
-    table.cell(t, 0, 11, "Risk $",       text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 11, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 12, "Shares",      text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 12, str.tostring(shares),                  text_color=color.aqua,  text_size=size.normal)
-    table.cell(t, 0, 13, "Direction",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 13, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
+    table.cell(t, 1, 9, entryText, text_color=entryColor, text_size=size.normal)
+    table.cell(t, 0, 10, "Risk $",       text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 10, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 11, "Shares",      text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 11, str.tostring(shares),                  text_color=color.aqua,  text_size=size.normal)
+    table.cell(t, 0, 12, "Direction",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 12, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
