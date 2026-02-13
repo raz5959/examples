@@ -1,0 +1,61 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// https://mozilla.org/MPL/2.0/
+// © ATR 50% Daily Levels
+
+//@version=6
+indicator("ATR 50% Daily Levels", overlay=true, max_lines_count=500)
+
+// === Inputs ===
+atrLength    = input.int(14, "ATR Period", minval=1)
+atrSmoothing = input.string("RMA", "ATR Smoothing", options=["RMA", "SMA", "EMA", "WMA"])
+showTable    = input.bool(true, "Show Info Table")
+upperColor   = input.color(color.new(color.green, 20), "Upper Level Color")
+lowerColor   = input.color(color.new(color.red, 20), "Lower Level Color")
+midColor     = input.color(color.new(color.gray, 40), "Daily Open Color")
+lineWidth    = input.int(2, "Line Width", minval=1, maxval=4)
+
+// === Daily ATR Calculation ===
+dailyHigh  = request.security(syminfo.tickerid, "D", high)
+dailyLow   = request.security(syminfo.tickerid, "D", low)
+dailyOpen  = request.security(syminfo.tickerid, "D", open)
+dailyClose = request.security(syminfo.tickerid, "D", close[1])
+
+// True Range on daily timeframe
+dailyTR = request.security(syminfo.tickerid, "D", ta.tr(true))
+
+// ATR with selectable smoothing method
+calcATR(src, len) =>
+    switch atrSmoothing
+        "RMA" => ta.rma(src, len)
+        "SMA" => ta.sma(src, len)
+        "EMA" => ta.ema(src, len)
+        "WMA" => ta.wma(src, len)
+
+dailyATR = request.security(syminfo.tickerid, "D", calcATR(ta.tr(true), atrLength))
+
+// === 50% ATR Levels ===
+halfATR    = dailyATR / 2.0
+upperLevel = dailyOpen + halfATR
+lowerLevel = dailyOpen - halfATR
+
+// === Plot Levels ===
+plot(upperLevel, "50% ATR Upper", color=upperColor, linewidth=lineWidth, style=plot.style_stepline)
+plot(lowerLevel, "50% ATR Lower", color=lowerColor, linewidth=lineWidth, style=plot.style_stepline)
+plot(dailyOpen, "Daily Open", color=midColor, linewidth=1, style=plot.style_stepline)
+
+// === Background Fill Between Levels ===
+p1 = plot(upperLevel, display=display.none)
+p2 = plot(lowerLevel, display=display.none)
+fill(p1, p2, color=color.new(color.blue, 92), title="ATR Zone Fill")
+
+// === Info Table ===
+if showTable and barstate.islast
+    var table infoTable = table.new(position.top_right, 2, 4, bgcolor=color.new(color.black, 80), border_width=1)
+    table.cell(infoTable, 0, 0, "Daily ATR(" + str.tostring(atrLength) + ")", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 0, str.tostring(dailyATR, format.mintick), text_color=color.yellow, text_size=size.small)
+    table.cell(infoTable, 0, 1, "50% ATR", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 1, str.tostring(halfATR, format.mintick), text_color=color.yellow, text_size=size.small)
+    table.cell(infoTable, 0, 2, "Upper Level", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 2, str.tostring(upperLevel, format.mintick), text_color=upperColor, text_size=size.small)
+    table.cell(infoTable, 0, 3, "Lower Level", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 3, str.tostring(lowerLevel, format.mintick), text_color=lowerColor, text_size=size.small)
