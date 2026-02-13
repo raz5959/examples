@@ -7,6 +7,7 @@ indicator("ATR 50/100 Daily Levels", overlay=true, max_lines_count=500)
 
 // === Inputs ===
 atrLength    = input.int(14, "ATR Period", minval=1)
+atrType      = input.string("SMA", "ATR Type", options=["RMA", "SMA"])
 lineWidth    = input.int(2, "Line Width", minval=1, maxval=4)
 atr50Color   = input.color(color.new(color.yellow, 0), "50% ATR Color")
 atr100Color  = input.color(color.new(color.red, 0), "100% ATR Color")
@@ -15,7 +16,9 @@ ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 
 // === Daily ATR Calculation ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
-dailyATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
+atrRMA    = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
+atrSMA    = request.security(syminfo.tickerid, "D", ta.sma(ta.tr(true), atrLength)[1], lookahead=barmerge.lookahead_on)
+dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
 
 // === 5-Min Moving Averages ===
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
