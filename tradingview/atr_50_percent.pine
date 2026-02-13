@@ -14,6 +14,7 @@ atr100Color  = input.color(color.new(color.red, 0), "100% ATR Color")
 ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 riskAmount   = input.float(100, "Risk Amount ($)", minval=1)
+maxTailPct   = input.float(30, "Max Tail % for Entry", minval=1, maxval=100)
 
 // === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
@@ -37,11 +38,15 @@ var float basePriceVal    = na
 var bool  bullish         = false
 var string scenario       = ""
 var string baseSource     = ""
+var float tailPct         = na
+var bool  entrySignal     = false
+var float firstClose      = na
 
-var line line50   = na
-var line line100  = na
-var label lbl50   = na
-var label lbl100  = na
+var line  line50    = na
+var line  line100   = na
+var label lbl50     = na
+var label lbl100    = na
+var label lblEntry  = na
 
 if newDay
     firstCandleHigh := high
@@ -63,6 +68,14 @@ if newDay
     scenario    := direction + " / " + gapType
     baseSource  := bearishGapUp ? "1st High" : bullishGapDown ? "1st Low" : "Prev Close"
 
+    // First candle tail analysis
+    // Bullish: tail = upper wick (high - close), want close near high
+    // Bearish: tail = lower wick (close - low), want close near low
+    firstClose   := close
+    tail         = bullish ? (high - close) : (close - low)
+    tailPct      := firstCandleSize > 0 ? (tail / firstCandleSize) * 100.0 : 100.0
+    entrySignal  := tailPct <= maxTailPct
+
     // Delete old lines and labels
     if not na(line50)
         line.delete(line50)
@@ -72,6 +85,15 @@ if newDay
         label.delete(lbl50)
     if not na(lbl100)
         label.delete(lbl100)
+    if not na(lblEntry)
+        label.delete(lblEntry)
+
+    // Entry signal label on chart
+    if entrySignal
+        lblEntry := label.new(bar_index, bullish ? low : high,
+             "ENTRY\nTail " + str.tostring(tailPct, "#.#") + "%",
+             style=bullish ? label.style_label_up : label.style_label_down,
+             color=color.green, textcolor=color.white, size=size.normal)
 
     // Draw fixed lines
     line50  := line.new(bar_index, atr50Val,  bar_index + 1, atr50Val,  color=atr50Color,  width=lineWidth, extend=extend.right)
@@ -87,7 +109,7 @@ plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 10, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Scenario",     text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, scenario,       text_color=bullish ? color.green : color.red, text_size=size.small)
     table.cell(t, 0, 1, "Base From",    text_color=color.white,  text_size=size.small)
@@ -102,9 +124,14 @@ if barstate.islast
     table.cell(t, 1, 5, str.tostring(atr100Val, format.mintick), text_color=atr100Color, text_size=size.small)
     table.cell(t, 0, 6, "1st Candle",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 6, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 7, "Risk $",       text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 7, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 8, "Shares",       text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 8, str.tostring(shares),                   text_color=color.aqua,  text_size=size.normal)
-    table.cell(t, 0, 9, "Direction",    text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 9, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
+    table.cell(t, 0, 7, "Tail %",       text_color=color.white,  text_size=size.small)
+    tailColor = entrySignal ? color.green : color.red
+    table.cell(t, 1, 7, str.tostring(tailPct, "#.#") + "%" + (bullish ? " (upper)" : " (lower)"), text_color=tailColor, text_size=size.small)
+    table.cell(t, 0, 8, "Entry",        text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 8, entrySignal ? "GO" : "NO", text_color=entrySignal ? color.green : color.red, text_size=size.normal)
+    table.cell(t, 0, 9, "Risk $",       text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 9, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 10, "Shares",      text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 10, str.tostring(shares),                  text_color=color.aqua,  text_size=size.normal)
+    table.cell(t, 0, 11, "Direction",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 11, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
