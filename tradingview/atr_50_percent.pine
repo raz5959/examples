@@ -59,18 +59,17 @@ var label lblEntry    = na
 if newDay
     halfATR        = dailyATR / 2.0
     bullish        := ma20_5m > ma200_5m
-    bearishGapUp   = not bullish and open > prevClose
-    bullishGapDown = bullish and open < prevClose
-    basePrice      = bearishGapUp ? high : bullishGapDown ? low : prevClose
-    basePriceVal   := basePrice
-    atr50Val       := bullish ? basePrice + halfATR  : basePrice - halfATR
-    atr100Val      := bullish ? basePrice + dailyATR : basePrice - dailyATR
+
+    // Preliminary base from prevClose; will update after 1st candle completes
+    basePriceVal   := prevClose
+    atr50Val       := bullish ? prevClose + halfATR  : prevClose - halfATR
+    atr100Val      := bullish ? prevClose + dailyATR : prevClose - dailyATR
 
     // Scenario description
     gapType = open > prevClose ? "Gap Up" : open < prevClose ? "Gap Down" : "Flat"
     dir     = bullish ? "Bullish" : "Bearish"
     scenario    := dir + " / " + gapType
-    baseSource  := bearishGapUp ? "1st High" : bullishGapDown ? "1st Low" : "Prev Close"
+    baseSource  := "Prev Close"
 
     // Reset entry until first candle completes
     entrySignal := false
@@ -110,13 +109,37 @@ if newDay
         linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
 
-// === First Candle Tail Analysis (on 2nd bar, after 1st candle is complete) ===
+// === First Candle Complete: Update Base Price & Tail Analysis ===
 secondBar = newDay[1]
 if secondBar
     firstCandleHigh := high[1]
     firstCandleLow  := low[1]
     firstCandleSize := high[1] - low[1]
     firstClose      := close[1]
+
+    // Bullish → base from 1st candle high; Bearish → base from 1st candle low
+    halfATR2   = dailyATR / 2.0
+    basePrice2 = bullish ? high[1] : low[1]
+    basePriceVal := basePrice2
+    atr50Val     := bullish ? basePrice2 + halfATR2  : basePrice2 - halfATR2
+    atr100Val    := bullish ? basePrice2 + dailyATR : basePrice2 - dailyATR
+    baseSource   := bullish ? "1st High" : "1st Low"
+
+    // Update ATR lines
+    if not na(line50)
+        line.set_y1(line50, atr50Val)
+        line.set_y2(line50, atr50Val)
+    if not na(line100)
+        line.set_y1(line100, atr100Val)
+        line.set_y2(line100, atr100Val)
+
+    // Update ATR labels
+    if not na(lbl50)
+        label.set_y(lbl50, atr50Val)
+        label.set_text(lbl50, "50% " + str.tostring(atr50Val, format.mintick))
+    if not na(lbl100)
+        label.set_y(lbl100, atr100Val)
+        label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
 
     // Bullish: tail = upper wick (high - close), want close near high
     // Bearish: tail = lower wick (close - low), want close near low
