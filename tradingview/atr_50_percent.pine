@@ -49,8 +49,7 @@ basePrice      = bearishGapUp ? dailyHigh : bullishGapDown ? dailyLow : prevClos
 atr50          = isBullish ? basePrice + halfATR  : basePrice - halfATR
 atr100         = isBullish ? basePrice + dailyATR : basePrice - dailyATR
 
-// === ATR Lines (today only) ===
-newDay = ta.change(time("D")) != 0
+// === ATR Lines (today only, update every bar) ===
 var line line50  = na
 var line line100 = na
 var label lbl50  = na
@@ -61,14 +60,23 @@ if newDay
         line.delete(line50)
     if not na(line100)
         line.delete(line100)
-    if not na(lbl50)
-        label.delete(lbl50)
-    if not na(lbl100)
-        label.delete(lbl100)
     line50  := line.new(bar_index, atr50,  bar_index + 1, atr50,  color=atr50Color,  width=lineWidth, extend=extend.right)
     line100 := line.new(bar_index, atr100, bar_index + 1, atr100, color=atr100Color, width=lineWidth, extend=extend.right)
-    lbl50   := label.new(bar_index, atr50,  "50% " + str.tostring(atr50, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
-    lbl100  := label.new(bar_index, atr100, "100% " + str.tostring(atr100, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
+
+// Update line y-values and labels every bar (for dynamic dailyHigh/dailyLow)
+if not na(line50)
+    line.set_y1(line50, atr50)
+    line.set_y2(line50, atr50)
+    line.set_color(line50, isBullish ? atr50Color : atr50Color)
+if not na(line100)
+    line.set_y1(line100, atr100)
+    line.set_y2(line100, atr100)
+if not na(lbl50)
+    label.delete(lbl50)
+if not na(lbl100)
+    label.delete(lbl100)
+lbl50  := label.new(bar_index + 5, atr50,  "50% " + str.tostring(atr50, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
+lbl100 := label.new(bar_index + 5, atr100, "100% " + str.tostring(atr100, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
 
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
