@@ -13,6 +13,8 @@ upperColor   = input.color(color.new(color.green, 20), "Upper Level Color")
 lowerColor   = input.color(color.new(color.red, 20), "Lower Level Color")
 midColor     = input.color(color.new(color.gray, 40), "Daily Open Color")
 lineWidth    = input.int(2, "Line Width", minval=1, maxval=4)
+ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
+ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 
 // === Daily ATR Calculation ===
 dailyHigh  = request.security(syminfo.tickerid, "D", high)
@@ -38,10 +40,16 @@ halfATR    = dailyATR / 2.0
 upperLevel = dailyOpen + halfATR
 lowerLevel = dailyOpen - halfATR
 
+// === 5-Min Moving Averages ===
+ma20_5m  = request.security(syminfo.tickerid, "5", ta.ema(close, 20))
+ma200_5m = request.security(syminfo.tickerid, "5", ta.ema(close, 200))
+
 // === Plot Levels ===
 plot(upperLevel, "50% ATR Upper", color=upperColor, linewidth=lineWidth, style=plot.style_stepline)
 plot(lowerLevel, "50% ATR Lower", color=lowerColor, linewidth=lineWidth, style=plot.style_stepline)
 plot(dailyOpen, "Daily Open", color=midColor, linewidth=1, style=plot.style_stepline)
+plot(ma20_5m, "EMA 20 (5m)", color=ma20Color, linewidth=2)
+plot(ma200_5m, "EMA 200 (5m)", color=ma200Color, linewidth=2)
 
 // === Background Fill Between Levels ===
 p1 = plot(upperLevel, display=display.none)
