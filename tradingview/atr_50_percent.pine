@@ -1,31 +1,22 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
 // https://mozilla.org/MPL/2.0/
-// © ATR 50% Daily Levels
+// © ATR 50% / 100% Daily Levels
 
 //@version=6
-indicator("ATR 50% Daily Levels", overlay=true, max_lines_count=500)
+indicator("ATR 50/100 Daily Levels", overlay=true, max_lines_count=500)
 
 // === Inputs ===
 atrLength    = input.int(14, "ATR Period", minval=1)
 atrSmoothing = input.string("RMA", "ATR Smoothing", options=["RMA", "SMA", "EMA", "WMA"])
-showTable    = input.bool(true, "Show Info Table")
-upperColor   = input.color(color.new(color.green, 20), "Upper Level Color")
-lowerColor   = input.color(color.new(color.red, 20), "Lower Level Color")
-midColor     = input.color(color.new(color.gray, 40), "Daily Open Color")
 lineWidth    = input.int(2, "Line Width", minval=1, maxval=4)
+atr50Color   = input.color(color.new(color.yellow, 0), "50% ATR Color")
+atr100Color  = input.color(color.new(color.red, 0), "100% ATR Color")
 ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 
 // === Daily ATR Calculation ===
-dailyHigh  = request.security(syminfo.tickerid, "D", high)
-dailyLow   = request.security(syminfo.tickerid, "D", low)
-dailyOpen  = request.security(syminfo.tickerid, "D", open)
-dailyClose = request.security(syminfo.tickerid, "D", close[1])
+dailyOpen = request.security(syminfo.tickerid, "D", open)
 
-// True Range on daily timeframe
-dailyTR = request.security(syminfo.tickerid, "D", ta.tr(true))
-
-// ATR with selectable smoothing method
 calcATR(src, len) =>
     switch atrSmoothing
         "RMA" => ta.rma(src, len)
@@ -39,39 +30,33 @@ dailyATR = request.security(syminfo.tickerid, "D", calcATR(ta.tr(true), atrLengt
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
 ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
 
-// === 50% ATR Levels (direction based on MA crossover) ===
-halfATR    = dailyATR / 2.0
-isBullish  = ma20_5m > ma200_5m
-atrLevel   = isBullish ? dailyOpen + halfATR : dailyOpen - halfATR
+// === ATR Levels (direction based on MA order) ===
+halfATR   = dailyATR / 2.0
+isBullish = ma20_5m > ma200_5m
+atr50     = isBullish ? dailyOpen + halfATR  : dailyOpen - halfATR
+atr100    = isBullish ? dailyOpen + dailyATR : dailyOpen - dailyATR
 
-// === ATR Line (solid horizontal line per day) ===
+// === ATR Lines (today only) ===
 newDay = ta.change(time("D")) != 0
-var line atrLine = na
-var label atrLabel = na
+var line line50  = na
+var line line100 = na
+var label lbl50  = na
+var label lbl100 = na
 
 if newDay
-    // Delete previous line and label so only today is visible
-    if not na(atrLine)
-        line.delete(atrLine)
-    if not na(atrLabel)
-        label.delete(atrLabel)
-    lineColor = isBullish ? upperColor : lowerColor
-    atrLine  := line.new(bar_index, atrLevel, bar_index + 1, atrLevel, color=lineColor, width=lineWidth, extend=extend.right)
-    atrLabel := label.new(bar_index, atrLevel, str.tostring(atrLevel, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=isBullish ? upperColor : lowerColor, size=size.normal)
+    if not na(line50)
+        line.delete(line50)
+    if not na(line100)
+        line.delete(line100)
+    if not na(lbl50)
+        label.delete(lbl50)
+    if not na(lbl100)
+        label.delete(lbl100)
+    line50  := line.new(bar_index, atr50,  bar_index + 1, atr50,  color=atr50Color,  width=lineWidth, extend=extend.right)
+    line100 := line.new(bar_index, atr100, bar_index + 1, atr100, color=atr100Color, width=lineWidth, extend=extend.right)
+    lbl50   := label.new(bar_index, atr50,  "50% " + str.tostring(atr50, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
+    lbl100  := label.new(bar_index, atr100, "100% " + str.tostring(atr100, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
 
-// === Plot MAs and Open ===
-plot(dailyOpen, "Daily Open", color=midColor, linewidth=1, style=plot.style_stepline)
+// === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
-
-// === Info Table ===
-if showTable and barstate.islast
-    var table infoTable = table.new(position.top_right, 2, 4, bgcolor=color.new(color.black, 80), border_width=1)
-    table.cell(infoTable, 0, 0, "Daily ATR(" + str.tostring(atrLength) + ")", text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 0, str.tostring(dailyATR, format.mintick), text_color=color.yellow, text_size=size.small)
-    table.cell(infoTable, 0, 1, "50% ATR", text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 1, str.tostring(halfATR, format.mintick), text_color=color.yellow, text_size=size.small)
-    table.cell(infoTable, 0, 2, "Direction", text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 2, isBullish ? "▲ LONG" : "▼ SHORT", text_color=isBullish ? upperColor : lowerColor, text_size=size.small)
-    table.cell(infoTable, 0, 3, "ATR Level", text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 3, str.tostring(atrLevel, format.mintick), text_color=isBullish ? upperColor : lowerColor, text_size=size.small)
