@@ -13,6 +13,7 @@ atr50Color   = input.color(color.new(color.yellow, 0), "50% ATR Color")
 atr100Color  = input.color(color.new(color.red, 0), "100% ATR Color")
 ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
+riskAmount   = input.float(100, "Risk Amount ($)", minval=1)
 
 // === Daily ATR Calculation ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
@@ -23,6 +24,18 @@ dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
 // === 5-Min Moving Averages ===
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
 ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
+
+// === First Candle of the Day ===
+var float firstCandleHigh = na
+var float firstCandleLow  = na
+var float firstCandleSize = na
+
+if newDay
+    firstCandleHigh := high
+    firstCandleLow  := low
+    firstCandleSize := high - low
+
+shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
 
 // === ATR Levels (direction based on MA order) ===
 halfATR   = dailyATR / 2.0
@@ -57,7 +70,7 @@ plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 7, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 10, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Prev Close",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, str.tostring(prevClose, format.mintick), text_color=color.white, text_size=size.small)
     table.cell(t, 0, 1, "ATR(" + str.tostring(atrLength) + ")", text_color=color.white, text_size=size.small)
@@ -72,3 +85,9 @@ if barstate.islast
     table.cell(t, 1, 5, str.tostring(ma20_5m, format.mintick),  text_color=ma20Color, text_size=size.small)
     table.cell(t, 0, 6, "SMA 200 (5m)", text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 6, str.tostring(ma200_5m, format.mintick), text_color=ma200Color, text_size=size.small)
+    table.cell(t, 0, 7, "1st Candle",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 7, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 8, "Risk $",       text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 8, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 9, "Shares",       text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 9, str.tostring(shares),                   text_color=color.aqua,  text_size=size.normal)
