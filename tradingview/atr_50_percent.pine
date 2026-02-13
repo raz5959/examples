@@ -14,7 +14,7 @@ ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 
 // === Daily ATR Calculation ===
-dailyOpen = request.security(syminfo.tickerid, "D", open)
+prevClose = request.security(syminfo.tickerid, "D", close[1])
 dailyATR  = request.security(syminfo.tickerid, "D", ta.atr(atrLength))
 
 // === 5-Min Moving Averages ===
@@ -24,8 +24,8 @@ ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
 // === ATR Levels (direction based on MA order) ===
 halfATR   = dailyATR / 2.0
 isBullish = ma20_5m > ma200_5m
-atr50     = isBullish ? dailyOpen + halfATR  : dailyOpen - halfATR
-atr100    = isBullish ? dailyOpen + dailyATR : dailyOpen - dailyATR
+atr50     = isBullish ? prevClose + halfATR  : prevClose - halfATR
+atr100    = isBullish ? prevClose + dailyATR : prevClose - dailyATR
 
 // === ATR Lines (today only) ===
 newDay = ta.change(time("D")) != 0
