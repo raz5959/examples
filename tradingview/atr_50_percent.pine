@@ -117,14 +117,14 @@ if secondBar
     firstCandleSize := high[1] - low[1]
     firstClose      := close[1]
 
-    // Bullish: if 1st candle crossed above prevClose → base from high, else prevClose
-    // Bearish: if 1st candle crossed below prevClose → base from low, else prevClose
+    // Bullish: if 1st candle dipped below prevClose → base from low, else prevClose
+    // Bearish: if 1st candle rose above prevClose → base from high, else prevClose
     halfATR2   = dailyATR / 2.0
-    basePrice2 = bullish ? math.max(high[1], prevClose) : math.min(low[1], prevClose)
+    basePrice2 = bullish ? math.min(low[1], prevClose) : math.max(high[1], prevClose)
     basePriceVal := basePrice2
     atr50Val     := bullish ? basePrice2 + halfATR2  : basePrice2 - halfATR2
     atr100Val    := bullish ? basePrice2 + dailyATR : basePrice2 - dailyATR
-    baseSource   := bullish ? (high[1] > prevClose ? "1st High" : "Prev Close") : (low[1] < prevClose ? "1st Low" : "Prev Close")
+    baseSource   := bullish ? (low[1] < prevClose ? "1st Low" : "Prev Close") : (high[1] > prevClose ? "1st High" : "Prev Close")
 
     // Update ATR lines
     if not na(line50)
