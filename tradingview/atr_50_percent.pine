@@ -15,8 +15,10 @@ ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
 ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
 riskAmount   = input.float(100, "Risk Amount ($)", minval=1)
 
-// === Daily ATR Calculation ===
+// === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+dailyHigh = request.security(syminfo.tickerid, "D", high)
+dailyOpen = request.security(syminfo.tickerid, "D", open)
 atrRMA    = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
 atrSMA    = request.security(syminfo.tickerid, "D", ta.sma(ta.tr(true), atrLength)[1], lookahead=barmerge.lookahead_on)
 dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
@@ -38,10 +40,12 @@ if newDay
 shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
 
 // === ATR Levels (direction based on MA order) ===
-halfATR   = dailyATR / 2.0
-isBullish = ma20_5m > ma200_5m
-atr50     = isBullish ? prevClose + halfATR  : prevClose - halfATR
-atr100    = isBullish ? prevClose + dailyATR : prevClose - dailyATR
+halfATR      = dailyATR / 2.0
+isBullish    = ma20_5m > ma200_5m
+isBearishGap = not isBullish and dailyOpen > prevClose
+basePrice    = isBearishGap ? dailyHigh : prevClose
+atr50        = isBullish ? prevClose + halfATR  : basePrice - halfATR
+atr100       = isBullish ? prevClose + dailyATR : basePrice - dailyATR
 
 // === ATR Lines (today only) ===
 newDay = ta.change(time("D")) != 0
