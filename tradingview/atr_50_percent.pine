@@ -33,7 +33,7 @@ var float firstCandleLow  = na
 var float firstCandleSize = na
 var float atr50Val        = na
 var float atr100Val       = na
-var bool  bullish         = na
+var bool  bullish         = false
 
 var line line50   = na
 var line line100  = na
@@ -89,7 +89,7 @@ if barstate.islast
     table.cell(t, 0, 4, "1st Candle",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 4, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
     table.cell(t, 0, 5, "Base Price",   text_color=color.white,  text_size=size.small)
-    baseP = not na(bullish) and not bullish and open > prevClose ? firstCandleHigh : (not na(bullish) and bullish and open < prevClose ? firstCandleLow : prevClose)
+    baseP = not bullish and open > prevClose ? firstCandleHigh : (bullish and open < prevClose ? firstCandleLow : prevClose)
     table.cell(t, 1, 5, str.tostring(baseP, format.mintick),    text_color=color.white, text_size=size.small)
     table.cell(t, 0, 6, "Risk $",       text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 6, str.tostring(riskAmount, "#.##"),       text_color=color.white, text_size=size.small)
