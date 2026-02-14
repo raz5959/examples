@@ -18,7 +18,8 @@ maxTailPct   = input.float(30, "Max Tail % for Entry", minval=1, maxval=100)
 
 prevDayColor = input.color(color.new(color.blue, 0), "Prev Day H/L Color")
 athColor     = input.color(color.new(color.lime, 0), "ATH Color")
-yearLowColor = input.color(color.new(color.fuchsia, 0), "Yearly Low Color")
+yearLowColor  = input.color(color.new(color.fuchsia, 0), "Yearly Low Color")
+yearHighColor = input.color(color.new(color.teal, 0), "Yearly High Color")
 
 // === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
@@ -36,11 +37,14 @@ ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
 var float ath = na
 ath := math.max(nz(ath, high), high)
 
-var float yearlyLow = na
+var float yearlyLow  = na
+var float yearlyHigh = na
 if year != year[1]
-    yearlyLow := low
+    yearlyLow  := low
+    yearlyHigh := high
 else
-    yearlyLow := math.min(nz(yearlyLow, low), low)
+    yearlyLow  := math.min(nz(yearlyLow, low), low)
+    yearlyHigh := math.max(nz(yearlyHigh, high), high)
 
 // === First Candle of the Day (everything calculated once here) ===
 newDay = ta.change(time("D")) != 0
@@ -69,8 +73,10 @@ var label lblPrevL    = na
 var label lblEntry    = na
 var line  lineATH     = na
 var line  lineYearLow = na
-var label lblATH      = na
-var label lblYearLow  = na
+var label lblATH       = na
+var label lblYearLow   = na
+var line  lineYearHigh = na
+var label lblYearHigh  = na
 
 if newDay
     halfATR        = dailyATR / 2.0
@@ -118,6 +124,10 @@ if newDay
         label.delete(lblATH)
     if not na(lblYearLow)
         label.delete(lblYearLow)
+    if not na(lineYearHigh)
+        line.delete(lineYearHigh)
+    if not na(lblYearHigh)
+        label.delete(lblYearHigh)
 
     // Draw fixed lines
     line50  := line.new(bar_index, atr50Val,  bar_index + 1, atr50Val,  color=atr50Color,  width=lineWidth, extend=extend.right)
@@ -133,11 +143,21 @@ if newDay
         linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
 
-    // Draw ATH and Yearly Low
-    lineATH     := line.new(bar_index, ath, bar_index + 1, ath, color=athColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    lblATH      := label.new(bar_index, ath, "ATH " + str.tostring(ath, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=athColor, size=size.normal)
-    lineYearLow := line.new(bar_index, yearlyLow, bar_index + 1, yearlyLow, color=yearLowColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    lblYearLow  := label.new(bar_index, yearlyLow, "YL " + str.tostring(yearlyLow, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearLowColor, size=size.normal)
+    // Draw ATH, Yearly High, Yearly Low (only if within 5% of current price)
+    athNear       = math.abs(ath - open) / open <= 0.05
+    yhNear        = math.abs(yearlyHigh - open) / open <= 0.05
+    ylNear        = math.abs(yearlyLow - open) / open <= 0.05
+    yhDiffFromATH = math.abs(yearlyHigh - ath) / ath > 0.001
+
+    if athNear
+        lineATH     := line.new(bar_index, ath, bar_index + 1, ath, color=athColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblATH      := label.new(bar_index, ath, "ATH " + str.tostring(ath, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=athColor, size=size.normal)
+    if yhNear and yhDiffFromATH
+        lineYearHigh := line.new(bar_index, yearlyHigh, bar_index + 1, yearlyHigh, color=yearHighColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblYearHigh  := label.new(bar_index, yearlyHigh, "YH " + str.tostring(yearlyHigh, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearHighColor, size=size.normal)
+    if ylNear
+        lineYearLow := line.new(bar_index, yearlyLow, bar_index + 1, yearlyLow, color=yearLowColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblYearLow  := label.new(bar_index, yearlyLow, "YL " + str.tostring(yearlyLow, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearLowColor, size=size.normal)
 
 // === First Candle Complete: Update Base Price & Tail Analysis ===
 secondBar = newDay[1]
@@ -194,7 +214,7 @@ plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Scenario",     text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, scenario,       text_color=bullish ? color.green : color.red, text_size=size.small)
     table.cell(t, 0, 1, "Base From",    text_color=color.white,  text_size=size.small)
@@ -223,10 +243,32 @@ if barstate.islast
     table.cell(t, 1, 9, entryText, text_color=entryColor, text_size=size.normal)
     table.cell(t, 0, 10, "Direction",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 10, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
-    table.cell(t, 0, 11, "ATH",          text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 11, str.tostring(ath, format.mintick), text_color=athColor, text_size=size.small)
-    table.cell(t, 0, 12, "Yearly Low",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 12, str.tostring(yearlyLow, format.mintick), text_color=yearLowColor, text_size=size.small)
+
+    // Proximity checks for ATH / Yearly High / Yearly Low (within 5%)
+    athNearTbl       = math.abs(ath - close) / close <= 0.05
+    yhNearTbl        = math.abs(yearlyHigh - close) / close <= 0.05
+    ylNearTbl        = math.abs(yearlyLow - close) / close <= 0.05
+    yhDiffFromATHTbl = math.abs(yearlyHigh - ath) / ath > 0.001
+
+    transBg   = color.new(color.black, 100)
+    transText = color.new(color.white, 100)
+    tableBg   = color.new(color.black, 80)
+    for i = 11 to 13
+        table.cell(t, 0, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
+        table.cell(t, 1, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
+
+    int r = 11
+    if athNearTbl
+        table.cell(t, 0, r, "ATH",       bgcolor=tableBg, text_color=color.white,    text_size=size.small)
+        table.cell(t, 1, r, str.tostring(ath, format.mintick), bgcolor=tableBg, text_color=athColor, text_size=size.small)
+        r := r + 1
+    if yhNearTbl and yhDiffFromATHTbl
+        table.cell(t, 0, r, "Yr High",   bgcolor=tableBg, text_color=color.white,    text_size=size.small)
+        table.cell(t, 1, r, str.tostring(yearlyHigh, format.mintick), bgcolor=tableBg, text_color=yearHighColor, text_size=size.small)
+        r := r + 1
+    if ylNearTbl
+        table.cell(t, 0, r, "Yr Low",    bgcolor=tableBg, text_color=color.white,    text_size=size.small)
+        table.cell(t, 1, r, str.tostring(yearlyLow, format.mintick), bgcolor=tableBg, text_color=yearLowColor, text_size=size.small)
 
     // === Risk & Shares Table ===
     var table t2 = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.black, 80), border_width=1)
