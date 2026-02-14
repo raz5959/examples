@@ -1,26 +1,22 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
 // https://mozilla.org/MPL/2.0/
 // © ATR 50% / 100% Daily Levels
-
 //@version=6
-indicator("ATR 50/100 Daily Levels", overlay=true, max_lines_count=500)
-
+indicator("מסחר מומנטום בפתיחה", overlay=true, max_lines_count=500)
 // === Inputs ===
 atrLength    = input.int(14, "ATR Period", minval=1)
 atrType      = input.string("SMA", "ATR Type", options=["RMA", "SMA"])
 lineWidth    = input.int(2, "Line Width", minval=1, maxval=4)
-atr50Color   = input.color(color.new(color.yellow, 0), "50% ATR Color")
+atr50Color   = input.color(color.new(#070600, 0), "50% ATR Color")
 atr100Color  = input.color(color.new(color.red, 0), "100% ATR Color")
-ma20Color    = input.color(color.new(color.orange, 0), "MA 20 Color")
-ma200Color   = input.color(color.new(color.purple, 0), "MA 200 Color")
+ma20Color    = input.color(color.new(#0063e4, 0), "MA 20 Color")
+ma200Color   = input.color(color.new(#ff0000, 0), "MA 200 Color")
 riskAmount   = input.float(100, "Risk Amount ($)", minval=1)
 maxTailPct   = input.float(30, "Max Tail % for Entry", minval=1, maxval=100)
-
 prevDayColor = input.color(color.new(color.blue, 0), "Prev Day H/L Color")
 athColor     = input.color(color.new(color.lime, 0), "ATH Color")
 yearLowColor  = input.color(color.new(color.fuchsia, 0), "Yearly Low Color")
 yearHighColor = input.color(color.new(color.teal, 0), "Yearly High Color")
-
 // === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
 prevHigh  = request.security(syminfo.tickerid, "D", high[1],  lookahead=barmerge.lookahead_on)
@@ -28,22 +24,17 @@ prevLow   = request.security(syminfo.tickerid, "D", low[1],   lookahead=barmerge
 atrRMA    = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
 atrSMA    = request.security(syminfo.tickerid, "D", ta.sma(ta.tr(true), atrLength)[1], lookahead=barmerge.lookahead_on)
 dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
-
 // === 5-Min Moving Averages ===
 ma20_5m  = request.security(syminfo.tickerid, "5", ta.sma(close, 20))
 ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
-
 // === All-Time High & Yearly Low ===
 var float ath = na
 ath := math.max(nz(ath, high), high)
-
 // Rolling 1-year lookback (252 trading days)
 yearlyLow  = request.security(syminfo.tickerid, "D", ta.lowest(low, 252),  lookahead=barmerge.lookahead_on)
 yearlyHigh = request.security(syminfo.tickerid, "D", ta.highest(high, 252), lookahead=barmerge.lookahead_on)
-
 // === First Candle of the Day (everything calculated once here) ===
 newDay = ta.change(time("D")) != 0
-
 var float firstCandleHigh = na
 var float firstCandleLow  = na
 var float firstCandleSize = na
@@ -56,7 +47,6 @@ var string baseSource     = ""
 var float tailPct         = na
 var bool  entrySignal     = false
 var float firstClose      = na
-
 var line  line50      = na
 var line  line100     = na
 var line  linePrevH   = na
@@ -72,26 +62,21 @@ var label lblATH       = na
 var label lblYearLow   = na
 var line  lineYearHigh = na
 var label lblYearHigh  = na
-
 if newDay
     halfATR        = dailyATR / 2.0
     bullish        := ma20_5m > ma200_5m
-
     // Preliminary base from prevClose; will update after 1st candle completes
     basePriceVal   := prevClose
     atr50Val       := bullish ? prevClose + halfATR  : prevClose - halfATR
     atr100Val      := bullish ? prevClose + dailyATR : prevClose - dailyATR
-
     // Scenario description
     gapType = open > prevClose ? "Gap Up" : open < prevClose ? "Gap Down" : "Flat"
     dir     = bullish ? "Bullish" : "Bearish"
     scenario    := dir + " / " + gapType
     baseSource  := "Prev Close"
-
     // Reset entry until first candle completes
     entrySignal := false
     tailPct     := na
-
     // Delete old lines and labels
     if not na(line50)
         line.delete(line50)
@@ -123,13 +108,11 @@ if newDay
         line.delete(lineYearHigh)
     if not na(lblYearHigh)
         label.delete(lblYearHigh)
-
     // Draw fixed lines
     line50  := line.new(bar_index, atr50Val,  bar_index + 1, atr50Val,  color=atr50Color,  width=lineWidth, extend=extend.right)
     line100 := line.new(bar_index, atr100Val, bar_index + 1, atr100Val, color=atr100Color, width=lineWidth, extend=extend.right)
     lbl50   := label.new(bar_index, atr50Val,  "50% " + str.tostring(atr50Val, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
     lbl100  := label.new(bar_index, atr100Val, "100% " + str.tostring(atr100Val, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
-
     // Draw previous day level: Bullish → PDH only, Bearish → PDL only
     if bullish
         linePrevH := line.new(bar_index, prevHigh, bar_index + 1, prevHigh, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
@@ -137,13 +120,11 @@ if newDay
     else
         linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
-
     // Draw ATH, Yearly High, Yearly Low (only if within 5% of current price)
     athNear       = math.abs(ath - open) / open <= 0.05
     yhNear        = math.abs(yearlyHigh - open) / open <= 0.05
     ylNear        = math.abs(yearlyLow - open) / open <= 0.05
     yhDiffFromATH = math.abs(yearlyHigh - ath) / ath > 0.001
-
     if athNear
         lineATH     := line.new(bar_index, ath, bar_index + 1, ath, color=athColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblATH      := label.new(bar_index, ath, "ATH " + str.tostring(ath, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=athColor, size=size.normal)
@@ -153,7 +134,6 @@ if newDay
     if ylNear
         lineYearLow := line.new(bar_index, yearlyLow, bar_index + 1, yearlyLow, color=yearLowColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblYearLow  := label.new(bar_index, yearlyLow, "YL " + str.tostring(yearlyLow, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearLowColor, size=size.normal)
-
 // === First Candle Complete: Update Base Price & Tail Analysis ===
 secondBar = newDay[1]
 if secondBar
@@ -161,7 +141,6 @@ if secondBar
     firstCandleLow  := low[1]
     firstCandleSize := high[1] - low[1]
     firstClose      := close[1]
-
     // Bullish: if 1st candle dipped below prevClose → base from low, else prevClose
     // Bearish: if 1st candle rose above prevClose → base from high, else prevClose
     halfATR2   = dailyATR / 2.0
@@ -170,7 +149,6 @@ if secondBar
     atr50Val     := bullish ? basePrice2 + halfATR2  : basePrice2 - halfATR2
     atr100Val    := bullish ? basePrice2 + dailyATR : basePrice2 - dailyATR
     baseSource   := bullish ? (low[1] < prevClose ? "1st Low" : "Prev Close") : (high[1] > prevClose ? "1st High" : "Prev Close")
-
     // Update ATR lines
     if not na(line50)
         line.set_y1(line50, atr50Val)
@@ -178,7 +156,6 @@ if secondBar
     if not na(line100)
         line.set_y1(line100, atr100Val)
         line.set_y2(line100, atr100Val)
-
     // Update ATR labels
     if not na(lbl50)
         label.set_y(lbl50, atr50Val)
@@ -186,13 +163,11 @@ if secondBar
     if not na(lbl100)
         label.set_y(lbl100, atr100Val)
         label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
-
     // Bullish: tail = upper wick (high - close), want close near high
     // Bearish: tail = lower wick (close - low), want close near low
     tail    = bullish ? (high[1] - close[1]) : (close[1] - low[1])
     tailPct := firstCandleSize > 0 ? (tail / firstCandleSize) * 100.0 : 100.0
     entrySignal := tailPct <= maxTailPct
-
     if not na(lblEntry)
         label.delete(lblEntry)
     if entrySignal
@@ -200,13 +175,10 @@ if secondBar
              "ENTRY\nTail " + str.tostring(tailPct, "#.#") + "%",
              style=bullish ? label.style_label_up : label.style_label_down,
              color=color.green, textcolor=color.white, size=size.normal)
-
 shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
-
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
-
 // === Info Table ===
 if barstate.islast
     var table t = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
@@ -238,20 +210,17 @@ if barstate.islast
     table.cell(t, 1, 9, entryText, text_color=entryColor, text_size=size.normal)
     table.cell(t, 0, 10, "Direction",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 10, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
-
     // Proximity checks for ATH / Yearly High / Yearly Low (within 5%)
     athNearTbl       = math.abs(ath - close) / close <= 0.05
     yhNearTbl        = math.abs(yearlyHigh - close) / close <= 0.05
     ylNearTbl        = math.abs(yearlyLow - close) / close <= 0.05
     yhDiffFromATHTbl = math.abs(yearlyHigh - ath) / ath > 0.001
-
     transBg   = color.new(color.black, 100)
     transText = color.new(color.white, 100)
     tableBg   = color.new(color.black, 80)
     for i = 11 to 13
         table.cell(t, 0, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
         table.cell(t, 1, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
-
     int r = 11
     if athNearTbl
         table.cell(t, 0, r, "ATH",       bgcolor=tableBg, text_color=color.white,    text_size=size.small)
@@ -264,10 +233,15 @@ if barstate.islast
     if ylNearTbl
         table.cell(t, 0, r, "Yr Low",    bgcolor=tableBg, text_color=color.white,    text_size=size.small)
         table.cell(t, 1, r, str.tostring(yearlyLow, format.mintick), bgcolor=tableBg, text_color=yearLowColor, text_size=size.small)
-
     // === Risk & Shares Table ===
     var table t2 = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.black, 80), border_width=1)
-    table.cell(t2, 0, 0, "Risk $",   text_color=color.white, text_size=size.small)
-    table.cell(t2, 1, 0, str.tostring(riskAmount, "#.##"), text_color=color.white, text_size=size.small)
-    table.cell(t2, 0, 1, "Shares",   text_color=color.white, text_size=size.small)
-    table.cell(t2, 1, 1, str.tostring(shares), text_color=color.aqua, text_size=size.normal)
+    table.cell(t2, 1, 0, "סיכון",   text_color=color.rgb(255, 255, 255), text_size=size.huge)
+    table.cell(t2, 0, 0, str.tostring(riskAmount, "#.##"), text_color=color.rgb(255, 0, 0), text_size=size.huge)
+    table.cell(t2, 1, 1, "כמות",   text_color=color.white, text_size=size.huge)
+    table.cell(t2, 0, 1, str.tostring(shares), text_color=color.aqua, text_size=size.huge)
+
+// === RAZTRADES Watermark ===
+    var table t3 = table.new(position.bottom_center, 1, 3)
+    table.cell(t3, 0, 0, "RAZTRADES", text_color=color.new(color.white, 50), text_size=size.huge)
+    table.cell(t3, 0, 1, "אין באמור המלצה לפעולה | למטרות לימוד בלבד | אינו מהווה ייעוץ השקעות", text_color=color.new(color.gray, 50), text_size=size.small)
+    table.cell(t3, 0, 2, "המסחר בניירות ערך כרוך בסיכון | יש לפעול בהתאם לשיקול דעת עצמאי בלבד", text_color=color.new(color.gray, 60), text_size=size.tiny)
