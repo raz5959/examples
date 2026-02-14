@@ -37,14 +37,9 @@ ma200_5m = request.security(syminfo.tickerid, "5", ta.sma(close, 200))
 var float ath = na
 ath := math.max(nz(ath, high), high)
 
-var float yearlyLow  = na
-var float yearlyHigh = na
-if year != year[1]
-    yearlyLow  := low
-    yearlyHigh := high
-else
-    yearlyLow  := math.min(nz(yearlyLow, low), low)
-    yearlyHigh := math.max(nz(yearlyHigh, high), high)
+// Rolling 1-year lookback (252 trading days)
+yearlyLow  = request.security(syminfo.tickerid, "D", ta.lowest(low, 252),  lookahead=barmerge.lookahead_on)
+yearlyHigh = request.security(syminfo.tickerid, "D", ta.highest(high, 252), lookahead=barmerge.lookahead_on)
 
 // === First Candle of the Day (everything calculated once here) ===
 newDay = ta.change(time("D")) != 0
