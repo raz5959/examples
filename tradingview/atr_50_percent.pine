@@ -239,27 +239,16 @@ if barstate.islast
         label.delete(array.pop(roundLabels))
     p = close
     threshold = p * 0.03
-    // Thousands
-    thBase = math.floor(p / 1000) * 1000
-    for i = -3 to 3
-        lvl = thBase + i * 1000
-        if lvl > 0 and math.abs(lvl - p) <= threshold
-            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.yellow, 30), style=line.style_dotted, width=2, extend=extend.both))
-            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.yellow, 30), size=size.small))
-    // Hundreds (skip if also a thousand)
-    hBase = math.floor(p / 100) * 100
-    for i = -5 to 5
-        lvl = hBase + i * 100
-        if lvl > 0 and math.abs(lvl - p) <= threshold and math.round(lvl) % 1000 != 0
-            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.orange, 50), style=line.style_dotted, width=1, extend=extend.both))
-            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.orange, 50), size=size.tiny))
-    // Tens (skip if also a hundred)
-    tBase = math.floor(p / 10) * 10
+    step  = p >= 1000 ? 1000 : p >= 100 ? 100 : 10
+    rBase = math.floor(p / step) * step
+    rClr  = p >= 1000 ? color.new(color.yellow, 30) : p >= 100 ? color.new(color.orange, 50) : color.new(color.gray, 60)
+    rSize = p >= 1000 ? size.small : size.tiny
+    rWid  = p >= 1000 ? 2 : 1
     for i = -10 to 10
-        lvl = tBase + i * 10
-        if lvl > 0 and math.abs(lvl - p) <= threshold and math.round(lvl) % 100 != 0
-            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.gray, 60), style=line.style_dotted, width=1, extend=extend.both))
-            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.gray, 60), size=size.tiny))
+        lvl = rBase + i * step
+        if lvl > 0 and math.abs(lvl - p) <= threshold
+            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=rClr, style=line.style_dotted, width=rWid, extend=extend.both))
+            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=rClr, size=rSize))
 // === Info Table ===
 if barstate.islast
     var table t = table.new(position.top_right, 2, 15, bgcolor=color.new(color.black, 80), border_width=1)
