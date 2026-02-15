@@ -119,11 +119,13 @@ if newDay
     line100 := line.new(bar_index, atr100Val, bar_index + 1, atr100Val, color=atr100Color, width=lineWidth, extend=extend.right)
     lbl50   := label.new(bar_index, atr50Val,  "50% " + str.tostring(atr50Val, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr50Color,  size=size.normal)
     lbl100  := label.new(bar_index, atr100Val, "100% " + str.tostring(atr100Val, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=atr100Color, size=size.normal)
-    // Draw previous day levels: always show BOTH PDH and PDL
-    linePrevH := line.new(bar_index, prevHigh, bar_index + 1, prevHigh, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    lblPrevH  := label.new(bar_index, prevHigh, "PDH " + str.tostring(prevHigh, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
-    linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
+    // Draw previous day level: Bullish → PDH, Bearish → PDL
+    if bullish
+        linePrevH := line.new(bar_index, prevHigh, bar_index + 1, prevHigh, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblPrevH  := label.new(bar_index, prevHigh, "PDH " + str.tostring(prevHigh, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
+    else
+        linePrevL := line.new(bar_index, prevLow,  bar_index + 1, prevLow,  color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblPrevL  := label.new(bar_index, prevLow,  "PDL " + str.tostring(prevLow, format.mintick),  style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
     // Draw ATH, Yearly High, Yearly Low (only if within 5% of current price)
     athNear       = math.abs(ath - open) / open <= 0.05
     yhNear        = math.abs(yearlyHigh - open) / open <= 0.05
@@ -206,27 +208,29 @@ if barstate.islast and not barstate.isrealtime
     if not na(lbl100)
         label.set_y(lbl100, atr100Val)
         label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
-    // Market closed → show BOTH today's high AND low for next-day prep
-    if not na(linePrevH)
-        line.set_y1(linePrevH, todayHighD)
-        line.set_y2(linePrevH, todayHighD)
+    // Market closed → update to today's H/L based on direction
+    if bullish
+        if not na(linePrevH)
+            line.set_y1(linePrevH, todayHighD)
+            line.set_y2(linePrevH, todayHighD)
+        else
+            linePrevH := line.new(bar_index, todayHighD, bar_index + 1, todayHighD, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        if not na(lblPrevH)
+            label.set_y(lblPrevH, todayHighD)
+            label.set_text(lblPrevH, "TDH " + str.tostring(todayHighD, format.mintick))
+        else
+            lblPrevH := label.new(bar_index, todayHighD, "TDH " + str.tostring(todayHighD, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
     else
-        linePrevH := line.new(bar_index, todayHighD, bar_index + 1, todayHighD, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    if not na(lblPrevH)
-        label.set_y(lblPrevH, todayHighD)
-        label.set_text(lblPrevH, "TDH " + str.tostring(todayHighD, format.mintick))
-    else
-        lblPrevH := label.new(bar_index, todayHighD, "TDH " + str.tostring(todayHighD, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
-    if not na(linePrevL)
-        line.set_y1(linePrevL, todayLowD)
-        line.set_y2(linePrevL, todayLowD)
-    else
-        linePrevL := line.new(bar_index, todayLowD, bar_index + 1, todayLowD, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
-    if not na(lblPrevL)
-        label.set_y(lblPrevL, todayLowD)
-        label.set_text(lblPrevL, "TDL " + str.tostring(todayLowD, format.mintick))
-    else
-        lblPrevL := label.new(bar_index, todayLowD, "TDL " + str.tostring(todayLowD, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
+        if not na(linePrevL)
+            line.set_y1(linePrevL, todayLowD)
+            line.set_y2(linePrevL, todayLowD)
+        else
+            linePrevL := line.new(bar_index, todayLowD, bar_index + 1, todayLowD, color=prevDayColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        if not na(lblPrevL)
+            label.set_y(lblPrevL, todayLowD)
+            label.set_text(lblPrevL, "TDL " + str.tostring(todayLowD, format.mintick))
+        else
+            lblPrevL := label.new(bar_index, todayLowD, "TDL " + str.tostring(todayLowD, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=prevDayColor, size=size.normal)
 shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize * 0.9) : 0
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
@@ -255,7 +259,7 @@ if barstate.islast
             array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=rClr, size=rSize))
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 16, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 15, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Scenario",     text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, scenario,       text_color=bullish ? color.green : color.red, text_size=size.small)
     table.cell(t, 0, 1, "Base From",    text_color=color.white,  text_size=size.small)
@@ -269,26 +273,22 @@ if barstate.islast
     table.cell(t, 0, 5, "100% Level",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 5, str.tostring(atr100Val, format.mintick), text_color=atr100Color, text_size=size.small)
     isMarketOpen = barstate.isrealtime
-    highLabel = isMarketOpen ? "Prev High" : "Today High"
-    highVal   = isMarketOpen ? prevHigh : todayHighD
-    lowLabel  = isMarketOpen ? "Prev Low"  : "Today Low"
-    lowVal    = isMarketOpen ? prevLow  : todayLowD
-    table.cell(t, 0, 6, highLabel,     text_color=color.white,    text_size=size.small)
-    table.cell(t, 1, 6, str.tostring(highVal, format.mintick), text_color=prevDayColor, text_size=size.small)
-    table.cell(t, 0, 7, lowLabel,      text_color=color.white,    text_size=size.small)
-    table.cell(t, 1, 7, str.tostring(lowVal, format.mintick),  text_color=prevDayColor, text_size=size.small)
-    table.cell(t, 0, 8, "1st Candle",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 8, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
-    table.cell(t, 0, 9, "Tail %",       text_color=color.white,  text_size=size.small)
+    prevDayLabel = bullish ? (isMarketOpen ? "Prev High" : "Today High") : (isMarketOpen ? "Prev Low" : "Today Low")
+    prevDayVal   = bullish ? (isMarketOpen ? prevHigh : todayHighD) : (isMarketOpen ? prevLow : todayLowD)
+    table.cell(t, 0, 6, prevDayLabel,   text_color=color.white,    text_size=size.small)
+    table.cell(t, 1, 6, str.tostring(prevDayVal, format.mintick), text_color=prevDayColor, text_size=size.small)
+    table.cell(t, 0, 7, "1st Candle",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 7, str.tostring(firstCandleSize, format.mintick), text_color=color.white, text_size=size.small)
+    table.cell(t, 0, 8, "Tail %",       text_color=color.white,  text_size=size.small)
     tailColor = entrySignal ? color.green : color.red
     tailText  = na(tailPct) ? "waiting..." : str.tostring(tailPct, "#.#") + "%" + (bullish ? " (upper)" : " (lower)")
-    table.cell(t, 1, 9, tailText, text_color=na(tailPct) ? color.gray : tailColor, text_size=size.small)
-    table.cell(t, 0, 10, "Entry",        text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 8, tailText, text_color=na(tailPct) ? color.gray : tailColor, text_size=size.small)
+    table.cell(t, 0, 9, "Entry",        text_color=color.white,  text_size=size.small)
     entryText  = na(tailPct) ? "waiting..." : (entrySignal ? "GO" : "NO")
     entryColor = na(tailPct) ? color.gray : (entrySignal ? color.green : color.red)
-    table.cell(t, 1, 10, entryText, text_color=entryColor, text_size=size.normal)
-    table.cell(t, 0, 11, "Direction",   text_color=color.white,  text_size=size.small)
-    table.cell(t, 1, 11, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
+    table.cell(t, 1, 9, entryText, text_color=entryColor, text_size=size.normal)
+    table.cell(t, 0, 10, "Direction",   text_color=color.white,  text_size=size.small)
+    table.cell(t, 1, 10, bullish ? "▲ UP" : "▼ DOWN", text_color=bullish ? color.green : color.red, text_size=size.small)
     // Proximity checks for ATH / Yearly High / Yearly Low (within 5%)
     athNearTbl       = math.abs(ath - close) / close <= 0.05
     yhNearTbl        = math.abs(yearlyHigh - close) / close <= 0.05
@@ -297,10 +297,10 @@ if barstate.islast
     transBg   = color.new(color.black, 100)
     transText = color.new(color.white, 100)
     tableBg   = color.new(color.black, 80)
-    for i = 12 to 15
+    for i = 11 to 14
         table.cell(t, 0, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
         table.cell(t, 1, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
-    int r = 12
+    int r = 11
     if athNearTbl
         table.cell(t, 0, r, "ATH",       bgcolor=tableBg, text_color=color.white,    text_size=size.small)
         table.cell(t, 1, r, str.tostring(ath, format.mintick), bgcolor=tableBg, text_color=athColor, text_size=size.small)
