@@ -179,7 +179,10 @@ if secondBar
     rrRatio := firstCandleSize > 0 ? reward / firstCandleSize : na
     if not na(lblEntry)
         label.delete(lblEntry)
-    if entrySignal
+    abovePrevClose = close[1] >= prevClose
+    belowPrevClose = close[1] <= prevClose
+    priceFilter    = bullish ? abovePrevClose : belowPrevClose
+    if entrySignal and priceFilter
         lblEntry := label.new(bar_index, bullish ? low[1] : high[1],
              "ENTRY\nTail " + str.tostring(tailPct, "#.#") + "%",
              style=bullish ? label.style_label_up : label.style_label_down,
