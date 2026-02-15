@@ -50,6 +50,7 @@ var string baseSource     = ""
 var float tailPct         = na
 var bool  entrySignal     = false
 var float firstClose      = na
+var float rrRatio         = na
 var line  line50      = na
 var line  line100     = na
 var line  linePrevH   = na
@@ -171,6 +172,9 @@ if secondBar
     tail    = bullish ? (high[1] - close[1]) : (close[1] - low[1])
     tailPct := firstCandleSize > 0 ? (tail / firstCandleSize) * 100.0 : 100.0
     entrySignal := tailPct <= maxTailPct
+    // Risk:Reward — risk = 1st candle size, reward = distance from entry to 100% ATR
+    reward  = bullish ? (atr100Val - close[1]) : (close[1] - atr100Val)
+    rrRatio := firstCandleSize > 0 ? reward / firstCandleSize : na
     if not na(lblEntry)
         label.delete(lblEntry)
     if entrySignal
@@ -199,7 +203,7 @@ if barstate.islast and not barstate.isrealtime
     if not na(lbl100)
         label.set_y(lbl100, atr100Val)
         label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
-shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize) : 0
+shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize * 0.9) : 0
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
@@ -268,11 +272,15 @@ if barstate.islast
         table.cell(t, 0, r, "MA20 D",    bgcolor=tableBg, text_color=color.white,    text_size=size.small)
         table.cell(t, 1, r, str.tostring(dailyMA20, format.mintick) + dma20Dir, bgcolor=tableBg, text_color=dma20Clr, text_size=size.small)
     // === Risk & Shares Table ===
-    var table t2 = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t2 = table.new(position.bottom_right, 2, 3, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t2, 1, 0, "סיכון",   text_color=color.rgb(255, 255, 255), text_size=size.huge)
     table.cell(t2, 0, 0, str.tostring(riskAmount, "#.##"), text_color=color.rgb(255, 0, 0), text_size=size.huge)
     table.cell(t2, 1, 1, "כמות",   text_color=color.white, text_size=size.huge)
     table.cell(t2, 0, 1, str.tostring(shares), text_color=color.aqua, text_size=size.huge)
+    table.cell(t2, 1, 2, "R:R",   text_color=color.white, text_size=size.huge)
+    rrText = na(rrRatio) ? "---" : "1:" + str.tostring(rrRatio, "#.##")
+    rrClr  = na(rrRatio) ? color.gray : (rrRatio >= 2 ? color.green : rrRatio >= 1 ? color.yellow : color.red)
+    table.cell(t2, 0, 2, rrText, text_color=rrClr, text_size=size.huge)
 
 // === RAZTRADES Watermark ===
     var table t3 = table.new(position.bottom_center, 1, 3)
