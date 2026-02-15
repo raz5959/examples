@@ -22,6 +22,8 @@ dailyMa20Color = input.color(color.new(#ff9800, 0), "Daily MA 20 Color")
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
 prevHigh  = request.security(syminfo.tickerid, "D", high[1],  lookahead=barmerge.lookahead_on)
 prevLow   = request.security(syminfo.tickerid, "D", low[1],   lookahead=barmerge.lookahead_on)
+todayHighD = request.security(syminfo.tickerid, "D", high,     lookahead=barmerge.lookahead_off)
+todayLowD  = request.security(syminfo.tickerid, "D", low,      lookahead=barmerge.lookahead_off)
 atrRMA    = request.security(syminfo.tickerid, "D", ta.atr(atrLength)[1], lookahead=barmerge.lookahead_on)
 atrSMA    = request.security(syminfo.tickerid, "D", ta.sma(ta.tr(true), atrLength)[1], lookahead=barmerge.lookahead_on)
 dailyATR  = atrType == "SMA" ? atrSMA : atrRMA
@@ -203,6 +205,21 @@ if barstate.islast and not barstate.isrealtime
     if not na(lbl100)
         label.set_y(lbl100, atr100Val)
         label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
+    // Market closed → update PDH/PDL to today's H/L
+    if bullish
+        if not na(linePrevH)
+            line.set_y1(linePrevH, todayHighD)
+            line.set_y2(linePrevH, todayHighD)
+        if not na(lblPrevH)
+            label.set_y(lblPrevH, todayHighD)
+            label.set_text(lblPrevH, "TDH " + str.tostring(todayHighD, format.mintick))
+    else
+        if not na(linePrevL)
+            line.set_y1(linePrevL, todayLowD)
+            line.set_y2(linePrevL, todayLowD)
+        if not na(lblPrevL)
+            label.set_y(lblPrevL, todayLowD)
+            label.set_text(lblPrevL, "TDL " + str.tostring(todayLowD, format.mintick))
 shares = firstCandleSize > 0 ? math.floor(riskAmount / firstCandleSize * 0.9) : 0
 // === Plot MAs ===
 plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
@@ -224,8 +241,9 @@ if barstate.islast
     table.cell(t, 1, 4, str.tostring(atr50Val, format.mintick), text_color=atr50Color, text_size=size.small)
     table.cell(t, 0, 5, "100% Level",   text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 5, str.tostring(atr100Val, format.mintick), text_color=atr100Color, text_size=size.small)
-    prevDayLabel = bullish ? "Prev High" : "Prev Low"
-    prevDayVal   = bullish ? prevHigh : prevLow
+    isMarketOpen = barstate.isrealtime
+    prevDayLabel = bullish ? (isMarketOpen ? "Prev High" : "Today High") : (isMarketOpen ? "Prev Low" : "Today Low")
+    prevDayVal   = bullish ? (isMarketOpen ? prevHigh : todayHighD) : (isMarketOpen ? prevLow : todayLowD)
     table.cell(t, 0, 6, prevDayLabel,   text_color=color.white,    text_size=size.small)
     table.cell(t, 1, 6, str.tostring(prevDayVal, format.mintick), text_color=prevDayColor, text_size=size.small)
     table.cell(t, 0, 7, "1st Candle",   text_color=color.white,  text_size=size.small)
