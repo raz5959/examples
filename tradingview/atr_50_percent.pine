@@ -279,7 +279,7 @@ if barstate.islast
     table.cell(t2, 0, 1, str.tostring(shares), text_color=color.aqua, text_size=size.huge)
     table.cell(t2, 1, 2, "R:R",   text_color=color.white, text_size=size.huge)
     rrText = na(rrRatio) ? "---" : "1:" + str.tostring(rrRatio, "#.##")
-    rrClr  = na(rrRatio) ? color.gray : (rrRatio >= 2 ? color.green : rrRatio >= 1 ? color.yellow : color.red)
+    rrClr  = na(rrRatio) ? color.gray : (rrRatio >= 2 ? color.green : rrRatio >= 1.5 ? color.yellow : color.red)
     table.cell(t2, 0, 2, rrText, text_color=rrClr, text_size=size.huge)
 
 // === RAZTRADES Watermark ===
