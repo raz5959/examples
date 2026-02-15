@@ -134,35 +134,13 @@ if newDay
     if ylNear
         lineYearLow := line.new(bar_index, yearlyLow, bar_index + 1, yearlyLow, color=yearLowColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblYearLow  := label.new(bar_index, yearlyLow, "YL " + str.tostring(yearlyLow, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearLowColor, size=size.normal)
-// === First Candle Complete: Update Base Price & Tail Analysis ===
+// === First Candle Complete: Tail Analysis (ATR always from Prev Close) ===
 secondBar = newDay[1]
 if secondBar
     firstCandleHigh := high[1]
     firstCandleLow  := low[1]
     firstCandleSize := high[1] - low[1]
     firstClose      := close[1]
-    // Bullish: if 1st candle dipped below prevClose → base from low, else prevClose
-    // Bearish: if 1st candle rose above prevClose → base from high, else prevClose
-    halfATR2   = dailyATR / 2.0
-    basePrice2 = bullish ? math.min(low[1], prevClose) : math.max(high[1], prevClose)
-    basePriceVal := basePrice2
-    atr50Val     := bullish ? basePrice2 + halfATR2  : basePrice2 - halfATR2
-    atr100Val    := bullish ? basePrice2 + dailyATR : basePrice2 - dailyATR
-    baseSource   := bullish ? (low[1] < prevClose ? "1st Low" : "Prev Close") : (high[1] > prevClose ? "1st High" : "Prev Close")
-    // Update ATR lines
-    if not na(line50)
-        line.set_y1(line50, atr50Val)
-        line.set_y2(line50, atr50Val)
-    if not na(line100)
-        line.set_y1(line100, atr100Val)
-        line.set_y2(line100, atr100Val)
-    // Update ATR labels
-    if not na(lbl50)
-        label.set_y(lbl50, atr50Val)
-        label.set_text(lbl50, "50% " + str.tostring(atr50Val, format.mintick))
-    if not na(lbl100)
-        label.set_y(lbl100, atr100Val)
-        label.set_text(lbl100, "100% " + str.tostring(atr100Val, format.mintick))
     // Bullish: tail = upper wick (high - close), want close near high
     // Bearish: tail = lower wick (close - low), want close near low
     tail    = bullish ? (high[1] - close[1]) : (close[1] - low[1])
