@@ -17,6 +17,7 @@ prevDayColor = input.color(color.new(color.blue, 0), "Prev Day H/L Color")
 athColor     = input.color(color.new(color.lime, 0), "ATH Color")
 yearLowColor  = input.color(color.new(color.fuchsia, 0), "Yearly Low Color")
 yearHighColor = input.color(color.new(color.teal, 0), "Yearly High Color")
+dailyMa20Color = input.color(color.new(#ff9800, 0), "Daily MA 20 Color")
 // === Daily Data ===
 prevClose = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
 prevHigh  = request.security(syminfo.tickerid, "D", high[1],  lookahead=barmerge.lookahead_on)
@@ -33,6 +34,8 @@ ath := math.max(nz(ath, high), high)
 // Rolling 1-year lookback (252 trading days)
 yearlyLow  = request.security(syminfo.tickerid, "D", ta.lowest(low, 252),  lookahead=barmerge.lookahead_on)
 yearlyHigh = request.security(syminfo.tickerid, "D", ta.highest(high, 252), lookahead=barmerge.lookahead_on)
+// === Daily SMA 20 ===
+dailyMA20 = request.security(syminfo.tickerid, "D", ta.sma(close, 20), lookahead=barmerge.lookahead_on)
 // === First Candle of the Day (everything calculated once here) ===
 newDay = ta.change(time("D")) != 0
 var float firstCandleHigh = na
@@ -62,6 +65,8 @@ var label lblATH       = na
 var label lblYearLow   = na
 var line  lineYearHigh = na
 var label lblYearHigh  = na
+var line  lineDailyMA20 = na
+var label lblDailyMA20  = na
 if newDay
     halfATR        = dailyATR / 2.0
     bullish        := ma20_5m > ma200_5m
@@ -108,6 +113,10 @@ if newDay
         line.delete(lineYearHigh)
     if not na(lblYearHigh)
         label.delete(lblYearHigh)
+    if not na(lineDailyMA20)
+        line.delete(lineDailyMA20)
+    if not na(lblDailyMA20)
+        label.delete(lblDailyMA20)
     // Draw fixed lines
     line50  := line.new(bar_index, atr50Val,  bar_index + 1, atr50Val,  color=atr50Color,  width=lineWidth, extend=extend.right)
     line100 := line.new(bar_index, atr100Val, bar_index + 1, atr100Val, color=atr100Color, width=lineWidth, extend=extend.right)
@@ -134,6 +143,11 @@ if newDay
     if ylNear
         lineYearLow := line.new(bar_index, yearlyLow, bar_index + 1, yearlyLow, color=yearLowColor, width=lineWidth, style=line.style_dashed, extend=extend.right)
         lblYearLow  := label.new(bar_index, yearlyLow, "YL " + str.tostring(yearlyLow, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=yearLowColor, size=size.normal)
+    // Daily MA 20 (only if within 5% of current price)
+    dma20Near = not na(dailyMA20) and math.abs(dailyMA20 - open) / open <= 0.05
+    if dma20Near
+        lineDailyMA20 := line.new(bar_index, dailyMA20, bar_index + 1, dailyMA20, color=dailyMa20Color, width=lineWidth, style=line.style_dashed, extend=extend.right)
+        lblDailyMA20  := label.new(bar_index, dailyMA20, "MA20D " + str.tostring(dailyMA20, format.mintick), style=label.style_label_left, color=color.new(color.black, 100), textcolor=dailyMa20Color, size=size.normal)
 // === First Candle Complete: Update Base Price & Tail Analysis ===
 secondBar = newDay[1]
 if secondBar
@@ -202,7 +216,7 @@ plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 // === Info Table ===
 if barstate.islast
-    var table t = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
+    var table t = table.new(position.top_right, 2, 15, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t, 0, 0, "Scenario",     text_color=color.white,  text_size=size.small)
     table.cell(t, 1, 0, scenario,       text_color=bullish ? color.green : color.red, text_size=size.small)
     table.cell(t, 0, 1, "Base From",    text_color=color.white,  text_size=size.small)
@@ -239,7 +253,7 @@ if barstate.islast
     transBg   = color.new(color.black, 100)
     transText = color.new(color.white, 100)
     tableBg   = color.new(color.black, 80)
-    for i = 11 to 13
+    for i = 11 to 14
         table.cell(t, 0, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
         table.cell(t, 1, i, "", bgcolor=transBg, text_color=transText, text_size=size.small)
     int r = 11
@@ -254,6 +268,11 @@ if barstate.islast
     if ylNearTbl
         table.cell(t, 0, r, "Yr Low",    bgcolor=tableBg, text_color=color.white,    text_size=size.small)
         table.cell(t, 1, r, str.tostring(yearlyLow, format.mintick), bgcolor=tableBg, text_color=yearLowColor, text_size=size.small)
+        r := r + 1
+    dma20NearTbl = not na(dailyMA20) and math.abs(dailyMA20 - close) / close <= 0.05
+    if dma20NearTbl
+        table.cell(t, 0, r, "MA20 D",    bgcolor=tableBg, text_color=color.white,    text_size=size.small)
+        table.cell(t, 1, r, str.tostring(dailyMA20, format.mintick), bgcolor=tableBg, text_color=dailyMa20Color, text_size=size.small)
     // === Risk & Shares Table ===
     var table t2 = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.black, 80), border_width=1)
     table.cell(t2, 1, 0, "סיכון",   text_color=color.rgb(255, 255, 255), text_size=size.huge)
