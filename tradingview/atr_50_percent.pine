@@ -2,7 +2,7 @@
 // https://mozilla.org/MPL/2.0/
 // © ATR 50% / 100% Daily Levels
 //@version=6
-indicator("מסחר מומנטום בפתיחה", overlay=true, max_lines_count=500)
+indicator("מסחר מומנטום בפתיחה", overlay=true, max_lines_count=500, max_labels_count=500)
 // === Inputs ===
 atrLength    = input.int(14, "ATR Period", minval=1)
 atrType      = input.string("SMA", "ATR Type", options=["RMA", "SMA"])
@@ -229,6 +229,37 @@ plot(ma20_5m, "SMA 20 (5m)", color=ma20Color, linewidth=2)
 plot(ma200_5m, "SMA 200 (5m)", color=ma200Color, linewidth=2)
 dma20Near = not na(dailyMA20) and math.abs(dailyMA20 - close) / close <= 0.05
 plot(dma20Near ? dailyMA20 : na, "SMA 20 (D)", color=dailyMa20Color, linewidth=2, style=plot.style_stepline)
+// === Round Number Levels (within 3%) ===
+var line[]  roundLines  = array.new_line()
+var label[] roundLabels = array.new_label()
+if barstate.islast
+    while array.size(roundLines) > 0
+        line.delete(array.pop(roundLines))
+    while array.size(roundLabels) > 0
+        label.delete(array.pop(roundLabels))
+    p = close
+    threshold = p * 0.03
+    // Thousands
+    thBase = math.floor(p / 1000) * 1000
+    for i = -3 to 3
+        lvl = thBase + i * 1000
+        if lvl > 0 and math.abs(lvl - p) <= threshold
+            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.yellow, 30), style=line.style_dotted, width=2, extend=extend.both))
+            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.yellow, 30), size=size.small))
+    // Hundreds (skip if also a thousand)
+    hBase = math.floor(p / 100) * 100
+    for i = -5 to 5
+        lvl = hBase + i * 100
+        if lvl > 0 and math.abs(lvl - p) <= threshold and math.round(lvl) % 1000 != 0
+            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.orange, 50), style=line.style_dotted, width=1, extend=extend.both))
+            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.orange, 50), size=size.tiny))
+    // Tens (skip if also a hundred)
+    tBase = math.floor(p / 10) * 10
+    for i = -10 to 10
+        lvl = tBase + i * 10
+        if lvl > 0 and math.abs(lvl - p) <= threshold and math.round(lvl) % 100 != 0
+            array.push(roundLines,  line.new(bar_index, lvl, bar_index + 1, lvl, color=color.new(color.gray, 60), style=line.style_dotted, width=1, extend=extend.both))
+            array.push(roundLabels, label.new(bar_index + 5, lvl, str.tostring(lvl, "#"), style=label.style_none, textcolor=color.new(color.gray, 60), size=size.tiny))
 // === Info Table ===
 if barstate.islast
     var table t = table.new(position.top_right, 2, 15, bgcolor=color.new(color.black, 80), border_width=1)
